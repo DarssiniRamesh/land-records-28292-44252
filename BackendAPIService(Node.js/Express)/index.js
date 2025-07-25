@@ -14,6 +14,41 @@ const { v4: uuidv4 } = require('uuid');
 // --- Configuration ---
 const JWT_SECRET = 'ChangeThisSecretForProduction!'; // For demo only.
 const PORT = process.env.PORT || 3001;
+
+// --- Pre-flight Environment Diagnostics ---
+function printStartupDiagnostics() {
+  // Print key environment and process info
+  // Check for PORT conflicts, missing secrets/variables, and Node version
+  // Print all env if not production
+  if (process.env.NODE_ENV !== "production") {
+    console.log("Process Environment Variables (partial):");
+    for (const k of Object.keys(process.env).filter(k => ["PORT", "NODE_ENV", "JWT_SECRET"].includes(k))) {
+      console.log(`[config] ${k}: ${process.env[k]}`);
+    }
+    if (!process.env.PORT) {
+      console.log(
+        "[info] Using default port 3001 (override via PORT env variable)"
+      );
+    }
+    if (process.env.PORT) {
+      const portNum = parseInt(process.env.PORT, 10);
+      if (isNaN(portNum) || portNum < 1024 || portNum > 65535) {
+        console.log(
+          `[warn] PORT env variable '${process.env.PORT}' is not a valid port. Defaulting to 3001.`
+        );
+      }
+    }
+    // JWT_SECRET warning for prod
+    if (JWT_SECRET === "ChangeThisSecretForProduction!" && process.env.NODE_ENV === "production") {
+      console.warn(
+        "[security] JWT_SECRET is default! Update JWT_SECRET in production for security."
+      );
+    }
+    // Node.js version check
+    console.log("[config] node version:", process.version);
+  }
+}
+printStartupDiagnostics();
 const DEMO_OFFICER_EMAIL = 'officer@gov.in';
 const DEMO_ADMIN_EMAIL = 'admin@gov.in';
 
@@ -418,7 +453,22 @@ app.get('/', (req, res) => {
   res.send("Land Records Management System API - see /api/*");
 });
 
-// --- Start the server ---
-app.listen(PORT, () => {
-  console.log(`BackendAPIService(Node.js/Express) running on port ${PORT}`);
-});
+/**
+ * Attempt to listen and capture startup errors to help diagnose exit code 1 causes
+ */
+function startServer() {
+  const server = app.listen(PORT, () => {
+    console.log(`BackendAPIService(Node.js/Express) running on port ${PORT}`);
+  });
+  server.on("error", (err) => {
+    if (err.code === "EADDRINUSE") {
+      console.error(`[ERROR] Port ${PORT} is already in use. Please set PORT to a free port.`);
+    } else if (err.code === "EACCES") {
+      console.error(`[ERROR] Insufficient privileges to bind to port ${PORT}.`);
+    } else {
+      console.error("[ERROR] Server failed to start:", err);
+    }
+    process.exit(1);
+  });
+}
+startServer();

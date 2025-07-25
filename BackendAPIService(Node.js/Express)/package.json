@@ -5,7 +5,8 @@
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "doctor": "echo Node version: && node -v && echo ENV: && printenv | grep -E 'PORT|NODE_ENV|JWT_SECRET'"
   },
   "dependencies": {
     "express": "^4.18.2",
