@@ -1,8 +1,6 @@
-//
 // Land Records Management System - BackendAPIService(Node.js/Express)
 // Central business logic and API gateway - NO persistent DB (in-memory demo only)
 // Features: User Auth, RBAC, Workflows, Documents, Payments, Notifications, Sample Data
-//
 
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -11,8 +9,28 @@ const cors = require('cors');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 
+/**
+ * PUBLIC_INTERFACE
+ * BackendAPIService for Land Records Management System.
+ * This service includes authentication, role-based access control (RBAC), 
+ * complex workflows for land record requests, demo payment, document upload and
+ * notification logic, language switching, and sample data reset.
+ * The data store is in-memory only (demonstration, resets on restart).
+ *
+ * - Users: Citizen, Officer, Admin (preconfigured)
+ * - Plots: GIS data sample (no real map backend)
+ * - Applications: mutation, correction, conversion workflows
+ * - Documents: In-memory file uploads (demo)
+ * - Notifications: Triggered on mutations, payments, etc.
+ * - Payments: Demo only, no real gateway
+ * - Language: English/Hindi user preference
+ * - RBAC enforced on endpoints ("citizen", "officer", "admin")
+ * 
+ * See /README.md for further usage.
+ */
+
 // --- Configuration ---
-const JWT_SECRET = 'ChangeThisSecretForProduction!'; // For demo only.
+const JWT_SECRET = 'ChangeThisSecretForProduction!'; // For demo only!
 const PORT = process.env.PORT || 3001;
 
 // --- Pre-flight Environment Diagnostics ---
@@ -81,7 +99,6 @@ const users = [
 ];
 
 const plots = [
-  // Each plot includes dummy GIS data and an assigned owner (user email)
   {
     plotId: "PLOT123",
     location: { lat: 28.7041, lng: 77.1025 },
@@ -97,18 +114,13 @@ const plots = [
   }
 ];
 
-const applications = [
-  // Sample application (e.g., mutation request)
-  // We can add new applications via API
-];
-
+const applications = [];
 const notifications = [];
 const payments = [];
 const documents = [];
 
 // --- App and Middleware ---
 const app = express();
-
 app.use(cors());
 app.use(bodyParser.json());
 const upload = multer({ storage: multer.memoryStorage() });
@@ -288,7 +300,7 @@ app.post('/api/applications', authorizeRoles(["citizen"]), (req, res) => {
   }
   const plot = plots.find(p => p.plotId === plotId && p.currentOwnerEmail === req.user.email);
   if (!plot) return res.status(400).json({ error: "Plot does not belong to you" });
-  const app = {
+  const appObj = {
     id: uuidv4(),
     applicationType,
     applicant: req.user.name,
@@ -302,9 +314,9 @@ app.post('/api/applications', authorizeRoles(["citizen"]), (req, res) => {
     paymentStatus: "pending",
     history: []
   };
-  applications.push(app);
+  applications.push(appObj);
   sendNotification(req.user.id, "Application submitted successfully. Please complete payment.");
-  return res.status(201).json(app);
+  return res.status(201).json(appObj);
 });
 
 /**
@@ -472,3 +484,4 @@ function startServer() {
   });
 }
 startServer();
+
